@@ -4,6 +4,10 @@
     {
       'label': 'Run php-cs-fixer'
       'command': 'php-cs-fixer:fix'
+    },
+    {
+      'label': 'Run php-cs-fixer on project'
+      'command': 'php-cs-fixer:fixProject'
     }
   ]
 'menu': [
@@ -15,7 +19,12 @@
         {
           'label': 'Fix'
           'command': 'php-cs-fixer:fix'
-        }
+        },
+        {
+          'label': 'Fix Project'
+          'command': 'php-cs-fixer:fixProject'
+        },
+
       ]
     ]
   }

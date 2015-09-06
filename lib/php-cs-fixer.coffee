@@ -49,6 +49,7 @@ module.exports = PhpCsFixer =
 
     # Register command that toggles this view
     @subscriptions.add atom.commands.add 'atom-workspace', 'php-cs-fixer:fix': => @fix()
+    @subscriptions.add atom.commands.add 'atom-workspace', 'php-cs-fixer:fixProject': => @fixProject()
 
     # Add workspace observer and save handler
     @subscriptions.add atom.workspace.observeTextEditors (editor) =>
@@ -58,6 +59,60 @@ module.exports = PhpCsFixer =
 
   deactivate: ->
     @subscriptions.dispose()
+
+  fixProject: ->
+    console.log "fixProject"
+    paths = atom.project.getPaths()
+    @fixDir path for path in paths
+
+  fixDir: (path) ->
+    command = @phpExecutablePath
+
+    # init options
+    args = [@executablePath, 'fix', path]
+
+    configPath = false
+    #if configPath = @findFile(path, '.php_cs')
+    #  args.push '--config-file=' + configPath
+
+    # add optional options
+    args.push '--level=' + @level if @level and not configPath
+    args.push '--fixers=' + @fixers if @fixers and not configPath
+
+    # some debug output for better support feedback
+    console.debug('php-cs-fixer Command', command)
+    console.debug('php-cs-fixer Arguments', args)
+
+    outputPanel = document.createElement("div");
+    outputPanel.innerText = "Fixer running."
+    options = {};
+    options.item = outputPanel;
+
+    modalPanel = atom.workspace.addModalPanel(options);
+
+    stdout = (output) ->
+      #Show a warning for everything that doesn't start with "Fixed..."
+      if (!/^\s*\d*\).*\.php/.test(output))
+        atom.notifications.addInfo(output)
+      outputElement = document.createElement("p")
+      outputElement.innerText = output
+      outputPanel.appendChild(outputElement);
+      console.log(output)
+    stderr = (output) ->
+      atom.notifications.addError(output)
+      console.error(output)
+    exit = (code) ->
+      console.log("#{command} exited with code: #{code}")
+      modalPanel.hide()
+      modalPanel.destroy()
+
+    process = new BufferedProcess({
+      command: command,
+      args: args,
+      stdout: stdout,
+      stderr: stderr,
+      exit: exit
+    }) if path
 
   fix: ->
     editor = atom.workspace.getActivePaneItem()
@@ -69,17 +124,18 @@ module.exports = PhpCsFixer =
     # init options
     args = [@executablePath, 'fix', filePath]
 
-    if configPath = @findFile(path.dirname(filePath), '.php_cs')
-      args.push '--config-file=' + configPath
+    # if configPath = @findFile(path.dirname(filePath), '.php_cs')
+    #  args.push '--config-file=' + configPath
 
     # add optional options
     args.push '--level=' + @level if @level and not configPath
     args.push '--fixers=' + @fixers if @fixers and not configPath
 
-    # some debug output for a better support feedback
+    # some debug output for better support feedback
     console.debug('php-cs-fixer Command', command)
     console.debug('php-cs-fixer Arguments', args)
     stdout = (output) ->
+      #Show a warning for everything that doesn't start with "Fixed..."
       if (!/^Fixed/.test(output))
         atom.notifications.addWarning(output)
       console.log(output)
